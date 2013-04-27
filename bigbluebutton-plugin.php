@@ -3,7 +3,7 @@
 Plugin Name: BigBlueButton
 Plugin URI: http://blindsidenetworks.com/integration
 Description: BigBlueButton is an open source web conferencing system. This plugin integrates BigBlueButton into WordPress allowing bloggers to create and manage meetings rooms to interact with their readers. For more information on setting up your own BigBlueButton server or for using an external hosting provider visit http://bigbluebutton.org/support
-Version: 1.3.3
+Version: 1.3.3-videochat
 Author: Blindside Networks
 Author URI: http://blindsidenetworks.com/
 License: GPLv2 or later
@@ -250,6 +250,12 @@ function bigbluebutton_update() {
         update_option( 'bigbluebutton_permissions', $permissions );
 
     }
+    
+    if( $bigbluebutton_plugin_version_installed && strcmp($bigbluebutton_plugin_version_installed, "1.3.3-videochat") < 0 ){
+        $sql = "ALTER TABLE " . $table_name . " ADD videochat BOOLEAN NOT NULL DEFAULT FALSE;";
+        $wpdb->query($sql);
+        
+    }
 
     ////////////////// Set new bigbluebutton_plugin_version value //////////////////
     update_option( "bigbluebutton_plugin_version", BIGBLUEBUTTON_PLUGIN_VERSION );
@@ -296,23 +302,24 @@ function bigbluebutton_init_database(){
     //Execute sql
     $sql = "CREATE TABLE " . $table_name . " (
     id mediumint(9) NOT NULL AUTO_INCREMENT,
-    meetingID text NOT NULL,
-    meetingName text NOT NULL,
-    meetingVersion int NOT NULL,
-    attendeePW text NOT NULL,
-    moderatorPW text NOT NULL,
+    meetingID TEXT NOT NULL,
+    meetingName TEXT NOT NULL,
+    meetingVersion INT NOT NULL,
+    attendeePW TEXT NOT NULL,
+    moderatorPW TEXT NOT NULL,
     waitForModerator BOOLEAN NOT NULL DEFAULT FALSE,
     recorded BOOLEAN NOT NULL DEFAULT FALSE,
+    videochat BOOLEAN NOT NULL DEFAULT FALSE,
     UNIQUE KEY id (id)
     );";
     dbDelta($sql);
 
     $sql = "CREATE TABLE " . $table_logs_name . " (
     id mediumint(9) NOT NULL AUTO_INCREMENT,
-    meetingID text NOT NULL,
+    meetingID TEXT NOT NULL,
     recorded BOOLEAN NOT NULL DEFAULT FALSE,
-    timestamp int NOT NULL,
-    event text NOT NULL,
+    timestamp INT NOT NULL,
+    event TEXT NOT NULL,
     UNIQUE KEY id (id)
     );";
     dbDelta($sql);
@@ -860,6 +867,7 @@ function bigbluebutton_create_meetings() {
         $moderatorPW = $_POST[ 'moderatorPW' ]? $_POST[ 'moderatorPW' ]: bigbluebutton_generatePasswd(6, 2, $attendeePW);
         $waitForModerator = (isset($_POST[ 'waitForModerator' ]) && $_POST[ 'waitForModerator' ] == 'True')? true: false;
         $recorded = (isset($_POST[ 'recorded' ]) && $_POST[ 'recorded' ] == 'True')? true: false;
+        $videochat = (isset($_POST[ 'videochat' ]) && $_POST[ 'videochat' ] == 'True')? true: false;
         //$meetingVersion = time();
         /// Assign a random unique ID based on the name and timestamp
         //$meetingID = sha1($meetingName.strval($meetingVersion));
@@ -899,7 +907,7 @@ function bigbluebutton_create_meetings() {
              
             //If the meeting doesn't exist in the wordpress database then create it
             if(!$alreadyExists){
-                $rows_affected = $wpdb->insert( $table_name, array( 'meetingID' => $meetingID, 'meetingName' => $meetingName, 'meetingVersion' => $meetingVersion, 'attendeePW' => $attendeePW, 'moderatorPW' => $moderatorPW, 'waitForModerator' => $waitForModerator? 1: 0, 'recorded' => $recorded? 1: 0) );
+                $rows_affected = $wpdb->insert( $table_name, array( 'meetingID' => $meetingID, 'meetingName' => $meetingName, 'meetingVersion' => $meetingVersion, 'attendeePW' => $attendeePW, 'moderatorPW' => $moderatorPW, 'waitForModerator' => $waitForModerator? 1: 0, 'recorded' => $recorded? 1: 0, 'videochat' => $videochat? 1: 0) );
 
                 $out .= '<div class="updated">
                 <p>
@@ -916,7 +924,8 @@ function bigbluebutton_create_meetings() {
             $moderatorPW = '';
             $waitForModerator = false;
             $recorded = false;
-
+            $videochat = false;
+            
         }
 
     }
@@ -929,6 +938,7 @@ function bigbluebutton_create_meetings() {
     <p>Moderator Password: <input type="text" name="moderatorPW" value="" size="20"></p>
     <p>Wait for moderator to start meeting: <input type="checkbox" name="waitForModerator" value="True" /></p>
     <p>Recorded meeting: <input type="checkbox" name="recorded" value="True" /></p>
+    <p>Videochat: <input type="checkbox" name="videochat" value="True" /></p>
     <p class="submit"><input type="submit" name="SubmitCreate" class="button-primary" value="Create" /></p>
     </form>
     <hr />';
@@ -1112,6 +1122,7 @@ function bigbluebutton_list_meetings() {
             <td>'.$meeting->moderatorPW.'</td>
             <td>'.($meeting->waitForModerator? 'Yes': 'No').'</td>
             <td>'.($meeting->recorded? 'Yes': 'No').'</td>
+            <td>'.($meeting->videochat? 'Yes': 'No').'</td>
             <td><input type="submit" name="SubmitList" class="button-primary" value="Join" />&nbsp;
             <input type="submit" name="SubmitList" class="button-primary" value="Delete" onClick="return confirm(\'Are you sure you want to delete the meeting?\')" />
             </td>
@@ -1355,6 +1366,7 @@ function bigbluebutton_print_table_header(){
     <th class="hed" colspan="1">Moderator Password</td>
     <th class="hed" colspan="1">Wait for Moderator</td>
     <th class="hed" colspan="1">Recorded</td>
+    <th class="hed" colspan="1">Videochat</td>
     <th class="hedextra" colspan="1">Actions</td>
     </tr>';
 }
