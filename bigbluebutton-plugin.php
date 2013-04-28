@@ -3,7 +3,7 @@
 Plugin Name: BigBlueButton
 Plugin URI: http://blindsidenetworks.com/integration
 Description: BigBlueButton is an open source web conferencing system. This plugin integrates BigBlueButton into WordPress allowing bloggers to create and manage meetings rooms to interact with their readers. For more information on setting up your own BigBlueButton server or for using an external hosting provider visit http://bigbluebutton.org/support
-Version: 1.3.3-videochat
+Version: 1.3.4
 Author: Blindside Networks
 Author URI: http://blindsidenetworks.com/
 License: GPLv2 or later
@@ -206,7 +206,7 @@ function bigbluebutton_update() {
     }
      
     //Set the new permission schema
-    if( $bigbluebutton_plugin_version_installed && strcmp($bigbluebutton_plugin_version_installed, "1.3.3") <= 0 ){
+    if( $bigbluebutton_plugin_version_installed && strcmp($bigbluebutton_plugin_version_installed, "1.3.3") < 0 ){
         $roles = $wp_roles->role_names;
         $roles['anonymous'] = 'Anonymous';
 
@@ -251,7 +251,7 @@ function bigbluebutton_update() {
 
     }
     
-    if( $bigbluebutton_plugin_version_installed && strcmp($bigbluebutton_plugin_version_installed, "1.3.3-videochat") < 0 ){
+    if( $bigbluebutton_plugin_version_installed && strcmp($bigbluebutton_plugin_version_installed, "1.3.4") < 0 ){
         $sql = "ALTER TABLE " . $table_name . " ADD videochat BOOLEAN NOT NULL DEFAULT FALSE;";
         $wpdb->query($sql);
         
@@ -471,24 +471,29 @@ function bigbluebutton_form($args) {
             );
             //Call for creating meeting on the bigbluebutton server
             $response = BigBlueButton::createMeetingArray($name, $found->meetingID, $found->meetingName, $welcome, $found->moderatorPW, $found->attendeePW, $salt_val, $url_val, $logouturl, $recorded? 'true':'false', $duration, $voicebridge, $metadata );
-
+            
             //Analyzes the bigbluebutton server's response
             if(!$response || $response['returncode'] == 'FAILED' ){//If the server is unreachable, or an error occured
                 $out .= "Sorry an error occured while joining the meeting.";
                 return $out;
                  
-            } else{ //The user can join the meeting, as it is valid
-                if( !isset($response['messageKey']) || $response['messageKey'] == '' ){
-                    // The meeting was just created, insert the create event to the log
-                    $rows_affected = $wpdb->insert( $table_logs_name, array( 'meetingID' => $found->meetingID, 'recorded' => $found->recorded, 'timestamp' => time(), 'event' => 'Create' ) );
-                }
-
-                $bigbluebutton_joinURL = BigBlueButton::getJoinURL($found->meetingID, $name, $password, $salt_val, $url_val );
-                //If the meeting is already running or the moderator is trying to join or a viewer is trying to join and the
-                //do not wait for moderator option is set to false then the user is immediately redirected to the meeting
-                if ( (BigBlueButton::isMeetingRunning( $found->meetingID, $url_val, $salt_val ) && ($found->moderatorPW == $password || $found->attendeePW == $password ) )
-                        || $response['moderatorPW'] == $password
-                        || ($response['attendeePW'] == $password && !$found->waitForModerator)  ){
+            } else{ //Server is reachable, the user can continue
+            	if( !isset($response['messageKey']) || $response['messageKey'] == '' ){
+            		// The meeting was just created, insert the create event to the log
+            		$rows_affected = $wpdb->insert( $table_logs_name, array( 'meetingID' => $found->meetingID, 'recorded' => $found->recorded, 'timestamp' => time(), 'event' => 'Create' ) );
+            	}
+            	 
+                //If a moderator is trying to join or a viewer is trying to join and the [wait for moderator] option is set to false 
+                //the user is immediately redirected to the meeting
+                if (  ( $response['moderatorPW'] == $password ) || ( $response['attendeePW'] == $password && !$found->waitForModerator )  ){
+                	
+                	//Set the proper join url
+                	if( $found->videochat ){
+                		$bigbluebutton_joinURL = bigbluebutton_getJoinURL4Videochat($found->meetingID, $name, $password, $salt_val, $url_val );//BigBlueButton::getJoinURLwithDynamicConfigXML();
+                	} else {
+                		$bigbluebutton_joinURL = BigBlueButton::getJoinURL($found->meetingID, $name, $password, $salt_val, $url_val );
+                	}
+                	 
                     //If the password submitted is correct then the user gets redirected
                     $out .= '<script type="text/javascript">window.location = "'.$bigbluebutton_joinURL.'";</script>'."\n";
                     return $out;
@@ -499,6 +504,7 @@ function bigbluebutton_form($args) {
                     //Stores the url and salt of the bigblubutton server in the session
                     $_SESSION['mt_bbb_url'] = $url_val;
                     $_SESSION['mt_salt'] = $salt_val;
+                    $_SESSION['meeting'] = $found;
                     //Displays the javascript to automatically redirect the user when the meeting begins
                     $out .= bigbluebutton_display_redirect_script($bigbluebutton_joinURL, $found->meetingID, $found->meetingName, $name);
                     return $out;
@@ -613,6 +619,14 @@ function bigbluebutton_form($args) {
     return $out;
 }
 
+
+function bigbluebutton_getJoinURL4Videochat($meetingID, $name, $password, $salt_val, $url_val ){
+	$joinURL = "";
+	
+	$xmlString = BigBlueButton::getDefaultConfigXML($url_val, $salt_val);
+	
+	return $joinURL;
+}
 
 //Displays the javascript that handles redirecting a user, when the meeting has started
 //the meetingName is the meetingID

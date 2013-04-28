@@ -26,6 +26,8 @@ Versions:
                     (email : omar DOT shammas [a t ] g m ail DOT com)
    1.3  --  Updated by Jesus Federico
                     (email : jesus [a t ] blind side n e t w o rks DOT com)
+   1.4  --  Updated by Jesus Federico
+                    (email : jesus [a t ] blind side n e t w o rks DOT com)
 
 */
 
@@ -211,21 +213,27 @@ class BigBlueButton {
 	public function getRecordingsURL($meetingID, $URL, $SALT ) {
 	    $base_url_record = $URL."api/getRecordings?";
 	    $params = "meetingID=".urlencode($meetingID);
-	
 	    return ($base_url_record.$params."&checksum=".sha1("getRecordings".$params.$SALT) );
 	}
 	
 	public function getDeleteRecordingsURL( $recordID, $URL, $SALT ) {
-	    $url_delete = $URL."api/deleteRecordings?";
+	    $base_url = $URL."api/deleteRecordings?";
 	    $params = 'recordID='.urlencode($recordID);
-	    return ($url_delete.$params.'&checksum='.sha1("deleteRecordings".$params.$SALT) );
+	    return ($base_url.$params.'&checksum='.sha1("deleteRecordings".$params.$SALT) );
 	}
 	
 	public function getPublishRecordingsURL( $recordID, $set, $URL, $SALT ) {
-	    $url_delete = $URL."api/publishRecordings?";
+	    $base_url = $URL."api/publishRecordings?";
 	    $params = 'recordID='.$recordID."&publish=".$set;
-	    return ($url_delete.$params.'&checksum='.sha1("publishRecordings".$params.$SALT) );
+	    return ($base_url.$params.'&checksum='.sha1("publishRecordings".$params.$SALT) );
 	}
+	
+	public String getDefaultConfigXMLURL( $URL, $SALT ) {
+	    $base_url = $URL."api/getDefaultConfigXML?";
+	    $params = '';
+	    return ($base_url.$params.'&checksum='.sha1("getDefaultConfigXML".$params.$SALT) );
+	}
+	
 	
 	//-----------------------------------------------CREATE----------------------------------------------------
 	/**
@@ -541,7 +549,7 @@ class BigBlueButton {
 
 	}
 
-	public function doDeleteRecordings( $recordIDs, $URL, $SALT ) {
+	public function deleteRecordings( $recordIDs, $URL, $SALT ) {
 	
 	    $ids = 	explode(",", $recordIDs);
 	    foreach( $ids as $id){
@@ -552,7 +560,7 @@ class BigBlueButton {
 	    return true;
 	}
 	
-	public function doPublishRecordings( $recordIDs, $set, $URL, $SALT ) {
+	public function publishRecordings( $recordIDs, $set, $URL, $SALT ) {
 	    $ids = 	explode(",", $recordIDs);
 	    foreach( $ids as $id){
 	        $xml = bbb_wrap_simplexml_load_file( BigBlueButton::getPublishRecordingsURL($id, $set, $URL, $SALT) );
@@ -572,7 +580,23 @@ class BigBlueButton {
 	        return NULL;
 	
 	}
-	
+
+	public function getDefaultConfigXML($URL, $SALT) {
+		$xml = bbb_wrap_simplexml_load_file( BigBlueButton::getDefaultConfigXMLURL($URL, $SALT) );
+		
+		return $xml->asXML();
+		
+		//if( $xml && $xml->returncode == 'SUCCESS' ) {
+		//	return $xml;
+		//}
+		//else if( $xml ) {
+		//	return ( (string)$xml->messageKey.' : '.(string)$xml->message );
+		//}
+		//else {
+		//	return ('Unable to fetch URL '.$url_create.$params.'&checksum='.sha1("create".$params.$SALT) );
+		//}
+		
+	}
 	
 	/**
 	*This method check the BigBlueButton server to see if the meeting is running (i.e. there is someone in the meeting)
