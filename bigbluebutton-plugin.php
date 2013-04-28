@@ -489,13 +489,14 @@ function bigbluebutton_form($args) {
                 	
                 	//Set the proper join url
                 	if( $found->videochat ){
-                		$bigbluebutton_joinURL = bigbluebutton_getJoinURL4Videochat($found->meetingID, $name, $password, $salt_val, $url_val );//BigBlueButton::getJoinURLwithDynamicConfigXML();
+                		$joinURL = bigbluebutton_getJoinURL4Videochat($found->meetingID, $name, $password, $salt_val, $url_val );//BigBlueButton::getJoinURLwithDynamicConfigXML();
                 	} else {
-                		$bigbluebutton_joinURL = BigBlueButton::getJoinURL($found->meetingID, $name, $password, $salt_val, $url_val );
+                		$joinURL = BigBlueButton::getJoinURL($found->meetingID, $name, $password, $salt_val, $url_val );
                 	}
                 	 
                     //If the password submitted is correct then the user gets redirected
-                    $out .= '<script type="text/javascript">window.location = "'.$bigbluebutton_joinURL.'";</script>'."\n";
+                    print_r($joinURL);
+                    $out .= '<script type="text/javascript">//window.location = "'.$joinURL.'";</script>'."\n";
                     return $out;
                 }
                 //If the viewer has the correct password, but the meeting has not yet started they have to wait
@@ -506,7 +507,7 @@ function bigbluebutton_form($args) {
                     $_SESSION['mt_salt'] = $salt_val;
                     $_SESSION['meeting'] = $found;
                     //Displays the javascript to automatically redirect the user when the meeting begins
-                    $out .= bigbluebutton_display_redirect_script($bigbluebutton_joinURL, $found->meetingID, $found->meetingName, $name);
+                    $out .= bigbluebutton_display_redirect_script($joinURL, $found->meetingID, $found->meetingName, $name);
                     return $out;
                 }
             }
@@ -621,16 +622,40 @@ function bigbluebutton_form($args) {
 
 
 function bigbluebutton_getJoinURL4Videochat($meetingID, $name, $password, $salt_val, $url_val ){
-	$joinURL = "";
+	$token = null;
 	
-	$xmlString = BigBlueButton::getDefaultConfigXML($url_val, $salt_val);
+	//Get default configXml
+	$configXML = BigBlueButton::getDefaultConfigXML($url_val, $salt_val);
+	//print_r($configXML);
+	//print_r("-----------------------------------------");
+	$configXML = str_replace("\r", "", $configXML);
+	$configXML = str_replace("\n", "", $configXML);
+	$configXML = str_replace("\t", "", $configXML);
+	$configXML = preg_replace("/>\s\s+</", "><", $configXML);
+	$configXML = preg_replace("/(<!--.+?)+(-->)/i", "", $configXML);
+	//print_r($configXML);
+	
+	//Change the layout
+	
+	$token = null;
+	//Set the new configXML
+	$reponse = BigBlueButton::setConfigXML($meetingID, $configXML, $url_val, $salt_val);
+	print_r('[');
+	print_r($response);
+	print_r(']');
+	//if($response && $response['returncode'] == 'SUCCESS' ){//If the server is reachable and no error occured
+	//    $token = $response['token'];
+	//}
+	
+	//Get a joinURL including the configXML token
+	$joinURL = BigBlueButton::getJoinURL($meetingID, $name, $password, $salt_val, $url_val, $token );
 	
 	return $joinURL;
 }
 
 //Displays the javascript that handles redirecting a user, when the meeting has started
 //the meetingName is the meetingID
-function bigbluebutton_display_redirect_script($bigbluebutton_joinURL, $meetingID, $meetingName, $name){
+function bigbluebutton_display_redirect_script($joinURL, $meetingID, $meetingName, $name){
 
     $out = '
     <script type="text/javascript">
@@ -642,7 +667,7 @@ function bigbluebutton_display_redirect_script($bigbluebutton_joinURL, $meetingI
     success : function(xmlDoc){
     $xml = jQuery( xmlDoc ), $running = $xml.find( "running" );
     if($running.text() == "true"){
-    window.location = "'.$bigbluebutton_joinURL.'";
+    window.location = "'.$joinURL.'";
 }
 },
 error : function(xmlHttpRequest, status, error) {
@@ -1030,9 +1055,8 @@ function bigbluebutton_list_meetings() {
             			$rows_affected = $wpdb->insert( $table_logs_name, array( 'meetingID' => $found->meetingID, 'recorded' => $found->recorded, 'timestamp' => time(), 'event' => 'Create' ) );
             		}
             
-            		$bigbluebutton_joinURL = BigBlueButton::getJoinURL($found->meetingID, $current_user->display_name, $found->moderatorPW, $salt_val, $url_val );
-            		print_r($bigbluebutton_joinURL);
-            		$out .= '<script type="text/javascript">window.location = "'.$bigbluebutton_joinURL.'"; </script>'."\n";
+            		$joinURL = BigBlueButton::getJoinURL($found->meetingID, $current_user->display_name, $found->moderatorPW, $salt_val, $url_val );
+            		$out .= '<script type="text/javascript">window.location = "'.$joinURL.'"; </script>'."\n";
             	}
             	 
             }

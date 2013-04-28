@@ -31,26 +31,33 @@ Versions:
 
 */
 
-function bbb_wrap_simplexml_load_file($url){
-	
+function bbb_wrap_simplexml_load_file($url, $params=null){
+
 	if (extension_loaded('curl')) {
 		$ch = curl_init() or die ( curl_error() );
 		$timeout = 10;
-		curl_setopt( $ch, CURLOPT_SSL_VERIFYPEER, false);	
+		curl_setopt( $ch, CURLOPT_SSL_VERIFYPEER, false);
 		curl_setopt( $ch, CURLOPT_URL, $url );
 		curl_setopt( $ch, CURLOPT_RETURNTRANSFER, 1 );
 		curl_setopt( $ch, CURLOPT_CONNECTTIMEOUT, $timeout);
+		
+		if( $params ){
+		    curl_setopt($ch, CURLOPT_POST, 1);
+		    curl_setopt($ch, CURLOPT_POSTFIELDS, $params);
+		}
+		
 		$data = curl_exec( $ch );
 		curl_close( $ch );
-		
+
 		if($data)
 			return (new SimpleXMLElement($data));
 		else
 			return false;
 	}
-	
-	return (simplexml_load_file($url));	
+
+	return (simplexml_load_file($url));
 }
+
 
 class BigBlueButton {
 	
@@ -103,67 +110,70 @@ class BigBlueButton {
 	*@param URL -- the url of the bigbluebutton server
 	*
 	*@return The url to join the meeting
-	*/
-	public function getJoinURL( $meetingID, $userName, $PW, $SALT, $URL ) {
-		$url_join = $URL."api/join?";
-		$params = 'meetingID='.urlencode($meetingID).'&fullName='.urlencode($userName).'&password='.urlencode($PW);
-		return ($url_join.$params.'&checksum='.sha1("join".$params.$SALT) );
-	}
+    */
+    public function getJoinURL( $meetingID, $userName, $PW, $SALT, $URL, $token = null ) {
+        $url_join = $URL."api/join?";
+        $params = 'meetingID='.urlencode($meetingID).'&fullName='.urlencode($userName).'&password='.urlencode($PW);
+        if( $token )
+            $params .= '&configToken='.urlencode($token);
+        return ($url_join.$params.'&checksum='.sha1("join".$params.$SALT) );
+    }
 
-	
-	/**
-	*This method returns the url to join the specified meeting.
-	*
-	*@param name -- a name fot the meeting
-	*@param meetingID -- the unique meeting identifier used to store the meeting in the bigbluebutton server
-	*@param attendeePW -- the attendee of the meeting
-	*@param moderatorPW -- the moderator of the meeting
-	*@param welcome -- the welcome message that gets displayed on the chat window
-	*@param logoutURL -- the URL that the bbb client will go to after users logouut
-	*@param SALT -- the security salt of the bigbluebutton server
-	*@param URL -- the url of the bigbluebutton server
-	*
-	*@return The url to join the meeting
-	*/
-	public function getCreateMeetingURL($name, $meetingID, $attendeePW, $moderatorPW, $welcome, $logoutURL, $SALT, $URL, $record = 'false', $duration=0, $voiceBridge=0, $metadata = array() ) {
-		$url_create = $URL."api/create?";
-		if ( $voiceBridge == 0)
-			$voiceBridge = 70000 + rand(0, 9999);
-	
-		$meta = '';
-		foreach ($metadata as $key => $value) {
-			$meta = $meta.'&'.$key.'='.urlencode($value);
-		}
-	
-		$params = 'name='.urlencode($name).'&meetingID='.urlencode($meetingID).'&attendeePW='.urlencode($attendeePW).'&moderatorPW='.urlencode($moderatorPW).'&voiceBridge='.$voiceBridge.'&logoutURL='.urlencode($logoutURL).'&record='.$record.$meta;
-	
-		$duration = intval($duration);
-		if( $duration > 0 )
-			$params .= '&duration='.$duration;
-	
-		if( trim( $welcome ) )
-			$params .= '&welcome='.urlencode($welcome);
-	
-		return ( $url_create.$params.'&checksum='.sha1("create".$params.$SALT) );
-	}
-	
-	
-	/**
-	*This method returns the url to check if the specified meeting is running.
-	*
-	*@param meetingID -- the unique meeting identifier used to store the meeting in the bigbluebutton server
-	*@param SALT -- the security salt of the bigbluebutton server
-	*@param URL -- the url of the bigbluebutton server
-	*
-	*@return The url to check if the specified meeting is running.
-	*/
-	public function getIsMeetingRunningURL( $meetingID, $URL, $SALT ) {
-		$base_url = $URL."api/isMeetingRunning?";
-		$params = 'meetingID='.urlencode($meetingID);
-		return ($base_url.$params.'&checksum='.sha1("isMeetingRunning".$params.$SALT) );	
-	}
+    
+    /**
+     *This method returns the url to join the specified meeting.
+     *
+     *@param name -- a name fot the meeting
+     *@param meetingID -- the unique meeting identifier used to store the meeting in the bigbluebutton server
+     *@param attendeePW -- the attendee of the meeting
+     *@param moderatorPW -- the moderator of the meeting
+     *@param welcome -- the welcome message that gets displayed on the chat window
+     *@param logoutURL -- the URL that the bbb client will go to after users logouut
+     *@param SALT -- the security salt of the bigbluebutton server
+     *@param URL -- the url of the bigbluebutton server
+     *
+     *@return The url to join the meeting
+     */
+    public function getCreateMeetingURL($name, $meetingID, $attendeePW, $moderatorPW, $welcome, $logoutURL, $SALT, $URL, $record = 'false', $duration=0, $voiceBridge=0, $metadata = array() ) {
+        $url_create = $URL."api/create?";
+        if ( $voiceBridge == 0)
+            $voiceBridge = 70000 + rand(0, 9999);
+        
+        $meta = '';
+        foreach ($metadata as $key => $value) {
+            $meta = $meta.'&'.$key.'='.urlencode($value);
+        }
+        
+        $params = 'name='.urlencode($name).'&meetingID='.urlencode($meetingID).'&attendeePW='.urlencode($attendeePW).'&moderatorPW='.urlencode($moderatorPW).'&voiceBridge='.$voiceBridge.'&logoutURL='.urlencode($logoutURL).'&record='.$record.$meta;
+        
+        $duration = intval($duration);
+        if( $duration > 0 )
+            $params .= '&duration='.$duration;
+        
+        if( trim( $welcome ) )
+            $params .= '&welcome='.urlencode($welcome);
+        
+        return ( $url_create.$params.'&checksum='.sha1("create".$params.$SALT) );
+        
+    }
 
-	/**
+
+    /**
+    *This method returns the url to check if the specified meeting is running.
+    *
+    *@param meetingID -- the unique meeting identifier used to store the meeting in the bigbluebutton server
+    *@param SALT -- the security salt of the bigbluebutton server
+    *@param URL -- the url of the bigbluebutton server
+    *
+    *@return The url to check if the specified meeting is running.
+    */
+    public function getIsMeetingRunningURL( $meetingID, $URL, $SALT ) {
+        $base_url = $URL."api/isMeetingRunning?";
+        $params = 'meetingID='.urlencode($meetingID);
+        return ($base_url.$params.'&checksum='.sha1("isMeetingRunning".$params.$SALT) );	
+    }
+
+    /**
 	*This method returns the url to getMeetingInfo of the specified meeting.
 	*
 	*@param meetingID -- the unique meeting identifier used to store the meeting in the bigbluebutton server
@@ -228,12 +238,40 @@ class BigBlueButton {
 	    return ($base_url.$params.'&checksum='.sha1("publishRecordings".$params.$SALT) );
 	}
 	
-	public String getDefaultConfigXMLURL( $URL, $SALT ) {
+	public function getDefaultConfigXMLURL( $URL, $SALT ) {
 	    $base_url = $URL."api/getDefaultConfigXML?";
 	    $params = '';
-	    return ($base_url.$params.'&checksum='.sha1("getDefaultConfigXML".$params.$SALT) );
+	    //return ($base_url.$params.'&checksum='.sha1("getDefaultConfigXML".$params.$SALT) );
+	    
+	    print_r($base_url.$params.'&checksum='.sha1("getDefaultConfigXML".$params.$SALT));
+	    
+	    return ("http://192.168.44.137/client/conf/config.xml");
+	     
+	}
+
+	public function setConfigXML($meetingID, $configXML, $URL, $SALT ) {
+	    $base_url = $URL."api/setConfigXML.xml";
+	    $params = 'meetingID='.urlencode($meetingID).'&checksum='.sha1($meetingID.($configXML).$SALT).'&configXML='.urlencode(($configXML));
+
+	    //print_r($base_url);
+	    //print_r($params);
+	     
+	    $xml = bbb_wrap_simplexml_load_file( $base_url, $params );
+	    
+	    if( $xml ) {
+	        return array('returncode' => (string)$xml->returncode, 'message' => (string)$xml->message, 'messageKey' => (string)$xml->messageKey,  );
+	    }
+	    else {
+	        return null;
+	    }
+	     
 	}
 	
+	
+	public function encodeURIComponent($str) {
+	    $revert = array('%21'=>'!', '%2A'=>'*', '%27'=>"'", '%28'=>'(', '%29'=>')');
+	    return strtr(rawurlencode($str), $revert);
+	}
 	
 	//-----------------------------------------------CREATE----------------------------------------------------
 	/**
