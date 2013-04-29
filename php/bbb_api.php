@@ -622,9 +622,11 @@ class BigBlueButton {
 	}
 
 	public function getDefaultConfigXML($URL, $SALT) {
-		//$xml = bbb_wrap_simplexml_load_file( BigBlueButton::getDefaultConfigXMLURL($URL, $SALT) );
-	    $xml = bbb_wrap_simplexml_load_file( "http://192.168.44.137/client/conf/config.xml" );
-		//If is encoded it must be decoded
+		$xml = bbb_wrap_simplexml_load_file( BigBlueButton::getDefaultConfigXMLURL($URL, $SALT) );
+		
+		//Workaround to the issue on getDefaultConfigXML call
+		$xml = (new SimpleXMLElement($xml->config));
+		
 		return $xml->asXML();
 	}
 	
