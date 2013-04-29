@@ -487,7 +487,7 @@ function bigbluebutton_form($args) {
                 	
                 	//Set the proper join url
                 	if( $found->videochat ){
-                		$joinURL = bigbluebutton_getJoinURL4Videochat($found->meetingID, $name, $password, $salt_val, $url_val );//BigBlueButton::getJoinURLwithDynamicConfigXML();
+                		$joinURL = BigBlueButton::getJoinURLWithNewLayout($found->meetingID, $name, $password, $salt_val, $url_val, "Video Chat" );
                 	} else {
                 		$joinURL = BigBlueButton::getJoinURL($found->meetingID, $name, $password, $salt_val, $url_val );
                 	}
@@ -503,9 +503,11 @@ function bigbluebutton_form($args) {
                     //Stores the url and salt of the bigblubutton server in the session
                     $_SESSION['mt_bbb_url'] = $url_val;
                     $_SESSION['mt_salt'] = $salt_val;
+                    $_SESSION['user_name'] = $name;
+                    $_SESSION['user_password'] = $password;
                     $_SESSION['meeting'] = $found;
                     //Displays the javascript to automatically redirect the user when the meeting begins
-                    $out .= bigbluebutton_display_redirect_script($joinURL, $found->meetingID, $found->meetingName, $name);
+                    $out .= bigbluebutton_display_redirect_script($found->meetingID, $found->meetingName, $name);
                     return $out;
                 }
             }
@@ -619,76 +621,47 @@ function bigbluebutton_form($args) {
 }
 
 
-function bigbluebutton_getJoinURL4Videochat($meetingID, $name, $password, $salt_val, $url_val ){
-	$token = null;
-	
-	//Get default configXml
-	$configXML = BigBlueButton::getDefaultConfigXML($url_val, $salt_val);
-	$configXML = str_replace("\r", "", $configXML);
-	$configXML = str_replace("\n", "", $configXML);
-	$configXML = str_replace("\t", "", $configXML);
-	$configXML = preg_replace("/>\s\s+</", "><", $configXML);
-	$configXML = preg_replace("/(<!--.+?)+(-->)/i", "", $configXML);
-	
-	//Change the layout
-	$newConfigXML = new SimpleXMLElement($configXML);
-	//print_r($newConfigXML->layout[0]->attributes());
-	$newConfigXML->layout[0]['defaultLayout'] = "Video Chat";
-	//print_r($newConfigXML->layout[0]->attributes());
-	$configXML = $newConfigXML->asXML();
-	
-	//Set the new configXML
-	$token = null;
-	$response = BigBlueButton::setConfigXML($meetingID, $configXML, $url_val, $salt_val);
-	if($response && $response['returncode'] == 'SUCCESS' ){//If the server is reachable and no error occured
-	    $token = $response['configToken'];
-	}
-	
-	//Get a joinURL including the configXML token
-	$joinURL = BigBlueButton::getJoinURL($meetingID, $name, $password, $salt_val, $url_val, $token );
-	
-	return $joinURL;
-}
-
 //Displays the javascript that handles redirecting a user, when the meeting has started
 //the meetingName is the meetingID
-function bigbluebutton_display_redirect_script($joinURL, $meetingID, $meetingName, $name){
+function bigbluebutton_display_redirect_script($meetingID, $meetingName, $name){
 
     $out = '
-    <script type="text/javascript">
+<script type="text/javascript">
     function bigbluebutton_ping() {
-    jQuery.ajax({
-    url : "./wp-content/plugins/bigbluebutton/php/broker.php?action=ping&meetingID='.urlencode($meetingID).'",
-    async : true,
-    dataType : "xml",
-    success : function(xmlDoc){
-    $xml = jQuery( xmlDoc ), $running = $xml.find( "running" );
-    if($running.text() == "true"){
-    window.location = "'.$joinURL.'";
-}
-},
-error : function(xmlHttpRequest, status, error) {
-console.debug(xmlHttpRequest);
-}
-});
+        jQuery.ajax({
+            url : "./wp-content/plugins/bigbluebutton/php/broker.php?action=ping&meetingID='.urlencode($meetingID).'",
+            async : true,
+            dataType : "xml",
+            success : function(xmlDoc){
+                $xml = jQuery( xmlDoc ), $running = $xml.find( "running" );
+                if($running.text() == "true"){
+                    $joinURL = $xml.find( "joinURL" );
+                    window.location = decodeURIComponent( ($joinURL.text() + \'\').replace(/\+/g, \'%20\') );
+                }
+            },
+            error : function(xmlHttpRequest, status, error) {
+                console.debug(xmlHttpRequest);
+            }
+        });
 
-}
+    }
 
-setInterval("bigbluebutton_ping()", 5000);
+    setInterval("bigbluebutton_ping()", 5000);
 </script>';
 
-    $out .= '<table>
-    <tbody>
+    $out .= '
+<table>
+  <tbody>
     <tr>
-    <td>
-    Welcome '.$name.'!<br /><br />
-    '.$meetingName.' session has not been started yet.<br /><br />
-    <div align="center"><img src="./wp-content/plugins/bigbluebutton/images/polling.gif" /></div><br />
-    (Your browser will automatically refresh and join the meeting when it starts.)
-    </td>
+      <td>
+        Welcome '.$name.'!<br /><br />
+        '.$meetingName.' session has not been started yet.<br /><br />
+        <div align="center"><img src="./wp-content/plugins/bigbluebutton/images/polling.gif" /></div><br />
+        (Your browser will automatically refresh and join the meeting when it starts.)
+      </td>
     </tr>
-    </tbody>
-    </table>';
+  </tbody>
+</table>';
 
     return $out;
 }

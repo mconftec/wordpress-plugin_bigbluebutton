@@ -33,7 +33,9 @@ $salt_name = 'mt_salt';
 $action_name = 'action';
 $recordingID_name = 'recordingID';
 $meetingID_name = 'meetingID';
-
+$meeting_name = 'meeting';
+$user_name_name = 'user_name';
+$user_password_name = 'user_password';
 //================================================================================
 //------------------------------------Main----------------------------------------
 //================================================================================
@@ -48,6 +50,7 @@ if ( !isset($_SESSION[$salt_name]) || !isset($_SESSION[$url_name]) ) {
     $salt_val = $_SESSION[$salt_name];
     $url_val = $_SESSION[$url_name];
     $action = $_GET[$action_name];
+    
     switch ($action) {
         case "publish":
             header('Content-Type: text/plain; charset=utf-8');
@@ -84,6 +87,17 @@ if ( !isset($_SESSION[$salt_name]) || !isset($_SESSION[$url_name]) ) {
             } else {
                 $meetingID = $_GET[$meetingID_name];
                 $response = BigBlueButton::getMeetingXML( $meetingID, $url_val, $salt_val );
+                
+                $meeting = $_SESSION[$meeting_name];
+                $name = $_SESSION[$user_name_name];
+                $password = $_SESSION[$user_password_name];
+                if( $meeting->videochat ){
+                    $joinURL = BigBlueButton::getJoinURLWithNewLayout($meetingID, $name, $password, $salt_val, $url_val, "Video Chat" );
+                } else {
+                    $joinURL = BigBlueButton::getJoinURL($meetingID, $name, $password, $salt_val, $url_val );
+                }
+                
+                $response .= "<joinURL>".urlencode($joinURL)."</joinURL>";
                 echo "<response>".$response."</response>";
             }
             break;

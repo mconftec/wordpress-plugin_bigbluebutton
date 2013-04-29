@@ -665,6 +665,38 @@ class BigBlueButton {
 		else
 			return 'false';	
 	}
+	
+	public function getJoinURLWithNewLayout($meetingID, $name, $password, $salt_val, $url_val, $layout="Default" ){
+	    $token = null;
+	
+	    //Get default configXml
+	    $configXML = BigBlueButton::getDefaultConfigXML($url_val, $salt_val);
+	    $configXML = str_replace("\r", "", $configXML);
+	    $configXML = str_replace("\n", "", $configXML);
+	    $configXML = str_replace("\t", "", $configXML);
+	    $configXML = preg_replace("/>\s\s+</", "><", $configXML);
+	    $configXML = preg_replace("/(<!--.+?)+(-->)/i", "", $configXML);
+	
+	    //Change the layout
+	    $newConfigXML = new SimpleXMLElement($configXML);
+	    //print_r($newConfigXML->layout[0]->attributes());
+	    $newConfigXML->layout[0]['defaultLayout'] = $layout;
+	    //print_r($newConfigXML->layout[0]->attributes());
+	    $configXML = $newConfigXML->asXML();
+	
+	    //Set the new configXML
+	    $token = null;
+	    $response = BigBlueButton::setConfigXML($meetingID, $configXML, $url_val, $salt_val);
+	    if($response && $response['returncode'] == 'SUCCESS' ){//If the server is reachable and no error occured
+	        $token = $response['configToken'];
+	    }
+	
+	    //Get a joinURL including the configXML token
+	    $joinURL = BigBlueButton::getJoinURL($meetingID, $name, $password, $salt_val, $url_val, $token );
+	
+	    return $joinURL;
+	}
+	
 
 }
 ?>
