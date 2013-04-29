@@ -32,7 +32,7 @@ Versions:
 */
 
 function bbb_wrap_simplexml_load_file($url, $params=null){
-
+    $response = false;
 	if (extension_loaded('curl')) {
 		$ch = curl_init() or die ( curl_error() );
 		$timeout = 10;
@@ -41,6 +41,7 @@ function bbb_wrap_simplexml_load_file($url, $params=null){
 		curl_setopt( $ch, CURLOPT_RETURNTRANSFER, 1 );
 		curl_setopt( $ch, CURLOPT_CONNECTTIMEOUT, $timeout);
 		
+		//print_r($params);
 		if( $params ){
 		    curl_setopt($ch, CURLOPT_POST, 1);
 		    curl_setopt($ch, CURLOPT_POSTFIELDS, $params);
@@ -50,12 +51,15 @@ function bbb_wrap_simplexml_load_file($url, $params=null){
 		curl_close( $ch );
 
 		if($data)
-			return (new SimpleXMLElement($data));
-		else
-			return false;
+			$response = (new SimpleXMLElement($data));
+	} else {
+	    if( !$params )
+	        $response =  (simplexml_load_file($url));
+	    
 	}
 
-	return (simplexml_load_file($url));
+	return $response;
+	
 }
 
 
@@ -241,28 +245,26 @@ class BigBlueButton {
 	public function getDefaultConfigXMLURL( $URL, $SALT ) {
 	    $base_url = $URL."api/getDefaultConfigXML?";
 	    $params = '';
-	    //return ($base_url.$params.'&checksum='.sha1("getDefaultConfigXML".$params.$SALT) );
-	    
-	    print_r($base_url.$params.'&checksum='.sha1("getDefaultConfigXML".$params.$SALT));
-	    
-	    return ("http://192.168.44.137/client/conf/config.xml");
-	     
+	    return ($base_url.$params.'&checksum='.sha1("getDefaultConfigXML".$params.$SALT) );
 	}
 
 	public function setConfigXML($meetingID, $configXML, $URL, $SALT ) {
 	    $base_url = $URL."api/setConfigXML.xml";
 	    $params = 'meetingID='.urlencode($meetingID).'&checksum='.sha1($meetingID.($configXML).$SALT).'&configXML='.urlencode(($configXML));
 
-	    //print_r($base_url);
-	    //print_r($params);
-	     
 	    $xml = bbb_wrap_simplexml_load_file( $base_url, $params );
 	    
 	    if( $xml ) {
-	        return array('returncode' => (string)$xml->returncode, 'message' => (string)$xml->message, 'messageKey' => (string)$xml->messageKey,  );
-	    }
-	    else {
+	        if( (string)$xml->returncode == "SUCCESS" ){
+	            return array('returncode' => (string)$xml->returncode, 'configToken' => (string)$xml->configToken );
+	            
+	        } else {
+	            return array('returncode' => (string)$xml->returncode, 'message' => (string)$xml->message, 'messageKey' => (string)$xml->messageKey  );
+	        }
+	        
+	    } else {
 	        return null;
+	        
 	    }
 	     
 	}
@@ -620,20 +622,10 @@ class BigBlueButton {
 	}
 
 	public function getDefaultConfigXML($URL, $SALT) {
-		$xml = bbb_wrap_simplexml_load_file( BigBlueButton::getDefaultConfigXMLURL($URL, $SALT) );
-		
+		//$xml = bbb_wrap_simplexml_load_file( BigBlueButton::getDefaultConfigXMLURL($URL, $SALT) );
+	    $xml = bbb_wrap_simplexml_load_file( "http://192.168.44.137/client/conf/config.xml" );
+		//If is encoded it must be decoded
 		return $xml->asXML();
-		
-		//if( $xml && $xml->returncode == 'SUCCESS' ) {
-		//	return $xml;
-		//}
-		//else if( $xml ) {
-		//	return ( (string)$xml->messageKey.' : '.(string)$xml->message );
-		//}
-		//else {
-		//	return ('Unable to fetch URL '.$url_create.$params.'&checksum='.sha1("create".$params.$SALT) );
-		//}
-		
 	}
 	
 	/**

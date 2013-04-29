@@ -429,7 +429,6 @@ function bigbluebutton_form($args) {
 
             if( !$current_user->ID ) {
                 $name = isset($_POST['display_name']) && $_POST['display_name']?$_POST['display_name']: $role;
-                
                 if( bigbluebutton_validate_defaultRole($role, 'none') ) {
                     $password = $_POST['pwd'];
                 } else {
@@ -437,7 +436,6 @@ function bigbluebutton_form($args) {
                 }
                     
             } else {
-                print_r('It was considered to sign with wp credentials');
                 if( $current_user->display_name != '' ){
                     $name = $current_user->display_name;
                 } else if( $current_user->user_firstname != '' || $current_user->user_lastname != '' ){
@@ -495,8 +493,8 @@ function bigbluebutton_form($args) {
                 	}
                 	 
                     //If the password submitted is correct then the user gets redirected
-                    print_r($joinURL);
-                    $out .= '<script type="text/javascript">//window.location = "'.$joinURL.'";</script>'."\n";
+                    //print_r($joinURL);
+                    $out .= '<script type="text/javascript">window.location = "'.$joinURL.'";</script>'."\n";
                     return $out;
                 }
                 //If the viewer has the correct password, but the meeting has not yet started they have to wait
@@ -626,26 +624,25 @@ function bigbluebutton_getJoinURL4Videochat($meetingID, $name, $password, $salt_
 	
 	//Get default configXml
 	$configXML = BigBlueButton::getDefaultConfigXML($url_val, $salt_val);
-	//print_r($configXML);
-	//print_r("-----------------------------------------");
 	$configXML = str_replace("\r", "", $configXML);
 	$configXML = str_replace("\n", "", $configXML);
 	$configXML = str_replace("\t", "", $configXML);
 	$configXML = preg_replace("/>\s\s+</", "><", $configXML);
 	$configXML = preg_replace("/(<!--.+?)+(-->)/i", "", $configXML);
-	//print_r($configXML);
 	
 	//Change the layout
+	$newConfigXML = new SimpleXMLElement($configXML);
+	//print_r($newConfigXML->layout[0]->attributes());
+	$newConfigXML->layout[0]['defaultLayout'] = "Video Chat";
+	//print_r($newConfigXML->layout[0]->attributes());
+	$configXML = $newConfigXML->asXML();
 	
-	$token = null;
 	//Set the new configXML
-	$reponse = BigBlueButton::setConfigXML($meetingID, $configXML, $url_val, $salt_val);
-	print_r('[');
-	print_r($response);
-	print_r(']');
-	//if($response && $response['returncode'] == 'SUCCESS' ){//If the server is reachable and no error occured
-	//    $token = $response['token'];
-	//}
+	$token = null;
+	$response = BigBlueButton::setConfigXML($meetingID, $configXML, $url_val, $salt_val);
+	if($response && $response['returncode'] == 'SUCCESS' ){//If the server is reachable and no error occured
+	    $token = $response['configToken'];
+	}
 	
 	//Get a joinURL including the configXML token
 	$joinURL = BigBlueButton::getJoinURL($meetingID, $name, $password, $salt_val, $url_val, $token );
