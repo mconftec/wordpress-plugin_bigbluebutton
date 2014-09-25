@@ -408,6 +408,7 @@ function bigbluebutton_form($args) {
     $nameLabel = isset($args['name_label']) ?$args['name_label']: __( 'Name:', 'bigbluebutton' );
     $submit = isset($args['submit']) ?$args['submit']: null;
     $waitingText = isset($args['waiting_text']) ?$args['waiting_text']: null;
+    $noPass = isset($args['no_password']) ? true : false;
 
     //Initializes the variable that will collect the output
     $out = '';
@@ -589,9 +590,18 @@ function bigbluebutton_form($args) {
                 <input type="text" id="name" name="display_name" size="10" value="'.$current_user->display_name.'" readonly="readonly">';
             }
             if( bigbluebutton_validate_defaultRole($role, 'none') ) {
-                $out .= '
-                <label>'.$passwordLabel.'</label>
-                <input type="password" name="pwd" size="10">';
+                if ( $noPass ) {
+                    foreach ($listOfMeetings as $meeting) {
+                        if ( $meeting->meetingID == $token ) {
+                            $out .= '
+                            <input type="hidden" name="pwd" value="'.$meeting->attendeePW.'">';
+                        }
+                    }
+                } else {
+                    $out .= '
+                    <label>'.$passwordLabel.'</label>
+                    <input type="password" name="pwd" size="10">';
+                }
             }
             $out .= '
             </table>';
