@@ -411,6 +411,7 @@ function bigbluebutton_form($args) {
     $submit = isset($args['submit']) ?$args['submit']: null;
     $waitingText = isset($args['waiting_text']) ?$args['waiting_text']: null;
     $noPass = isset($args['no_password']) ? true : false;
+    $useMobile = isset($args['no_mobile']) ? false : true;
 
     //Initializes the variable that will collect the output
     $out = '';
@@ -518,10 +519,11 @@ function bigbluebutton_form($args) {
                 $bigbluebutton_joinURL = BigBlueButton::getJoinURL($found->meetingID, $name, $password, $salt_val, $url_val );
 
                 // Mobile detection
-                $detect = new Mobile_Detect;
-                if ( $detect->isAndroidOS() || $detect->isiOS() ) {
-                    // $bigbluebutton_joinURL = str_ireplace("http://", "black", $bigbluebutton_joinURL);
-                    $bigbluebutton_joinURL = preg_replace('/http[s]?:\/\//i', 'bigbluebutton://', $bigbluebutton_joinURL);
+                if ( $useMobile ) {
+                    $detect = new Mobile_Detect;
+                    if ( $detect->isAndroidOS() || $detect->isiOS() ) {
+                        $bigbluebutton_joinURL = preg_replace('/http[s]?:\/\//i', 'bigbluebutton://', $bigbluebutton_joinURL);
+                    }
                 }
 
                 //If the meeting is already running or the moderator is trying to join or a viewer is trying to join and the
