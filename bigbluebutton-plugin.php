@@ -412,6 +412,8 @@ function bigbluebutton_form($args) {
     $waitingText = isset($args['waiting_text']) ?$args['waiting_text']: null;
     $noPass = isset($args['no_password']) ? true : false;
     $useMobile = isset($args['no_mobile']) ? false : true;
+    $autoMobile = isset($args['no_auto_mobile']) ? false : true;
+    $mobileLabel = isset($args['mobile_label']) ? $args['mobile_label']: __( 'Use the mobile client', 'bigbluebutton' );
 
     //Initializes the variable that will collect the output
     $out = '';
@@ -520,9 +522,10 @@ function bigbluebutton_form($args) {
 
                 // Mobile detection
                 if ( $useMobile ) {
+                    $forceMobile = isset($_POST['force_mobile']) && $_POST['force_mobile'] ? true : false;
                     $detect = new Mobile_Detect;
-                    if ( $detect->isAndroidOS() || $detect->isiOS() ) {
-                        $bigbluebutton_joinURL = preg_replace('/http[s]?:\/\//i', 'bigbluebutton://', $bigbluebutton_joinURL);
+                    if ( $forceMobile || ($autoMobile && ($detect->isAndroidOS() || $detect->isiOS())) ) {
+	                $bigbluebutton_joinURL = preg_replace('/http[s]?:\/\//i', 'bigbluebutton://', $bigbluebutton_joinURL);
                     }
                 }
 
@@ -615,6 +618,14 @@ function bigbluebutton_form($args) {
                     <input type="password" name="pwd" size="10">';
                 }
             }
+
+            // Show the "force mobile" option if asked to
+            if ( $useMobile && !$autoMobile ) {
+                $out .= '
+                <input type="checkbox" id="bigbluebutton-force-mobile" name="force_mobile" />
+                <label for="bigbluebutton-force-mobile">'.$mobileLabel.'</label>';
+            }
+
             $out .= '
             </table>';
             if(sizeof($listOfMeetings) > 1 && !$token ){
