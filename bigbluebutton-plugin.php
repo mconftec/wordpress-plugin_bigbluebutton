@@ -412,7 +412,7 @@ function bigbluebutton_form($args) {
     $waitingText = isset($args['waiting_text']) ?$args['waiting_text']: null;
     $noPass = isset($args['no_password']) ? true : false;
     $useMobile = isset($args['no_mobile']) ? false : true;
-    $autoMobile = isset($args['no_auto_mobile']) ? false : true;
+    $showMobileOption = isset($args['show_mobile_option']) ? true : false;
     $mobileLabel = isset($args['mobile_label']) ? $args['mobile_label']: __( 'Use the mobile client', 'bigbluebutton' );
 
     //Initializes the variable that will collect the output
@@ -522,9 +522,8 @@ function bigbluebutton_form($args) {
 
                 // Mobile detection
                 if ( $useMobile ) {
-                    $forceMobile = isset($_POST['force_mobile']) && $_POST['force_mobile'] ? true : false;
-                    $detect = new Mobile_Detect;
-                    if ( $forceMobile || ($autoMobile && ($detect->isAndroidOS() || $detect->isiOS())) ) {
+                    $selectedMobile = isset($_POST['use_mobile']) && $_POST['use_mobile'] ? true : false;
+                    if ( $selectedMobile || (!$showMobileOption && bigbluebutton_is_device_for_mobile_client()) ) {
 	                $bigbluebutton_joinURL = preg_replace('/http[s]?:\/\//i', 'bigbluebutton://', $bigbluebutton_joinURL);
                     }
                 }
@@ -620,9 +619,10 @@ function bigbluebutton_form($args) {
             }
 
             // Show the "force mobile" option if asked to
-            if ( $useMobile && !$autoMobile ) {
+            if ( $useMobile && $showMobileOption ) {
+                $isMobile = bigbluebutton_is_device_for_mobile_client();
                 $out .= '
-                <input type="checkbox" id="bigbluebutton-force-mobile" name="force_mobile" />
+                <input type="checkbox" id="bigbluebutton-force-mobile" name="use_mobile" '.($isMobile?'checked="checked"':'').' />
                 <label for="bigbluebutton-force-mobile">'.$mobileLabel.'</label>';
             }
 
@@ -721,6 +721,12 @@ function bigbluebutton_display_redirect_script($bigbluebutton_joinURL, $meetingI
     return $out;
 }
 
+//Returns whether the current device is a device target for the mobile client.
+//The current targets for the mobile client are all Android and iOS devices.
+function bigbluebutton_is_device_for_mobile_client(){
+    $detect = new Mobile_Detect;
+    return $detect->isAndroidOS() || $detect->isiOS();
+}
 
 //================================================================================
 //---------------------------------bigbluebutton Page--------------------------------------
