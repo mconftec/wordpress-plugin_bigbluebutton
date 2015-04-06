@@ -626,8 +626,6 @@ function bigbluebutton_form($args) {
                 <label for="bigbluebutton-force-mobile">'.$mobileLabel.'</label>';
             }
 
-            $out .= '
-            </table>';
             if(sizeof($listOfMeetings) > 1 && !$token ){
                 $out .= '
                 
