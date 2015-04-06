@@ -15,6 +15,8 @@ Text Domain: bigbluebutton
 //---------------------------Standard Plugin definition---------------------------
 //================================================================================
 
+require_once dirname(__FILE__) . DIRECTORY_SEPARATOR . 'Mobile_Detect.php';
+
 //validate
 global $wp_version;
 $exit_msg = "This plugin has been designed for Wordpress 2.5 and later, please upgrade your current one.";
@@ -514,6 +516,14 @@ function bigbluebutton_form($args) {
                 }
 
                 $bigbluebutton_joinURL = BigBlueButton::getJoinURL($found->meetingID, $name, $password, $salt_val, $url_val );
+
+                // Mobile detection
+                $detect = new Mobile_Detect;
+                if ( $detect->isAndroidOS() || $detect->isiOS() ) {
+                    // $bigbluebutton_joinURL = str_ireplace("http://", "black", $bigbluebutton_joinURL);
+                    $bigbluebutton_joinURL = preg_replace('/http[s]?:\/\//i', 'bigbluebutton://', $bigbluebutton_joinURL);
+                }
+
                 //If the meeting is already running or the moderator is trying to join or a viewer is trying to join and the
                 //do not wait for moderator option is set to false then the user is immediately redirected to the meeting
                 if ( (BigBlueButton::isMeetingRunning( $found->meetingID, $url_val, $salt_val ) && ($found->moderatorPW == $password || $found->attendeePW == $password ) )
