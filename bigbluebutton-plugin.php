@@ -414,6 +414,7 @@ function bigbluebutton_form($args) {
     $useMobile = isset($args['no_mobile']) ? false : true;
     $showMobileOption = isset($args['show_mobile_option']) ? true : false;
     $mobileLabel = isset($args['mobile_label']) ? $args['mobile_label']: __( 'Use the mobile client', 'bigbluebutton' );
+    $useGuest = isset($args['use_guest']) ? true : false;
 
     //Initializes the variable that will collect the output
     $out = '';
@@ -517,8 +518,9 @@ function bigbluebutton_form($args) {
                     // The meeting was just created, insert the create event to the log
                     $rows_affected = $wpdb->insert( $table_logs_name, array( 'meetingID' => $found->meetingID, 'recorded' => $found->recorded, 'timestamp' => time(), 'event' => 'Create' ) );
                 }
+                $guest = ($useGuest && $password != $found->moderatorPW) ? 'true' : 'false';
 
-                $bigbluebutton_joinURL = BigBlueButton::getJoinURL($found->meetingID, $name, $password, $salt_val, $url_val );
+                $bigbluebutton_joinURL = BigBlueButton::getJoinURL($found->meetingID, $name, $password, $salt_val, $url_val, $guest );
 
                 // Mobile detection
                 if ( $useMobile ) {
